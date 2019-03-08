@@ -1,0 +1,79 @@
+---
+title: "Practical Machine Learning Course Assignment"
+author: "Vibhu Sapra"
+date: "March 8, 2019"
+output:   
+        md_document:
+                variant: markdown_github
+---
+
+## Read data and set seed
+```{r, echo = T}
+data <- read.csv("trainingdata.csv", na.strings = c("NA","", "#DIV/0!"))
+set.seed(1234)
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+library(lattice)
+```
+## get rid of useless rows that I don't want to use in my model
+```{r, echo = T}
+data2 <- data[,-c(1:7)]
+# Get rid of rows with NA
+data3 <- data2[,colSums(is.na(data2)) == 0]
+```
+## Split data so I can use 75% to train and 25% to test my prediction
+```{r, echo = T}
+data3 <- data2[,colSums(is.na(data2)) == 0]
+```
+## Cross Validation - Split data so I can use 75% to train and 25% to test my prediction
+```{r, echo = T}
+trainingdata <- createDataPartition(y=data3$classe, p = 0.75, list = FALSE)        
+train <- data3[trainingdata, ]
+testtrain <- data3[-trainingdata, ]
+```
+## I want to check how often each classes come up
+```{r, echo = T}
+plot(train$classe, main = "Plot of Classe Variable in Training Data", xlab = "Classe", ylab = "Frequency", col = "blue")
+```
+I can see that A is a little more frequent, but they are spread out pretty evenly
+# Model 1 - Decision Trees
+```{r, echo = T}
+model1 <- rpart(classe ~ ., data=train, method="class")
+prediction1 <- predict(model1, testtrain, type = "class")
+
+# Plot the prediction
+rattle::fancyRpartPlot(model1, main = "prediction 1 Classification Tree")
+
+head(prediction1)
+head(testtrain$classe)
+
+# Confusion matrix
+matrix1 <- confusionMatrix(prediction1, testtrain$classe)
+matrix1
+```
+This model is only 75% accurate, I want to try another model
+
+# Model 2 - Random Forresting
+```{r, echo = T}
+model2 <- randomForest(classe ~., data = train, type = "class")
+prediction2 <- predict(model2, testtrain, type = "class")
+
+# Confusion Matrix
+matrix2 <- confusionMatrix(prediction2, testtrain$classe)
+matrix2
+# 99.5% accurate
+```
+This is a much better model **99.5% accurate**
+# Quiz prediction
+```{r, echo = T}
+quizdata <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+quizdata <-quizdata[,colSums(is.na(quizdata)) == 0]
+quizdata <-quizdata[,-c(1:7)]
+
+quizprediction <- predict(model2, quizdata, type = "class")
+quizprediction
+```
+# Ending analysis and conclusion
+In my model, I used cross validation by splitting the training data into 75% for training and 25% for testing. I created a model with the 75% and tested it on the remaining 25% for which I already knew the true values it was going to predict. I found that using Random forresting was the best model as it was 99.5% accurate.
